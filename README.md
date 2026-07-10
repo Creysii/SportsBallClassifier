@@ -124,5 +124,5 @@ Python · OpenCV · scikit-image · scikit-learn · PyTorch · pandas · matplot
 
 ## Autor
 
-Johan — Ingeniería en Inteligencia Artificial, Universidad de Xalapa.
+Johanan Rosaldo Hernandez — Ingeniería en Inteligencia Artificial, Universidad de Xalapa.
 Proyecto desarrollado para la asignatura de Procesamiento de Imágenes.
