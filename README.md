@@ -1,11 +1,39 @@
 # Clasificación de Pelotas Deportivas — Descriptores Clásicos + ML/DL
 
-Proyecto para el Examen Final: clasificación de 15 tipos de pelotas
-deportivas usando descriptores geométricos/de región clásicos (LBP,
-HOG, Momentos de Hu, Código de Freeman) y cuatro clasificadores
-(KNN, SVM, Naive Bayes, CNN).
+Sistema de clasificación de imágenes para 15 tipos de pelotas deportivas
+(fútbol americano, béisbol, baloncesto, billar, boliche, críquet, fútbol,
+golf, hockey césped, hockey puck, rugby, bádminton, tenis de mesa, tenis
+y voleibol), a partir de descriptores geométricos y de región clásicos:
 
-## 1. Instalación
+- **LBP** (Local Binary Patterns) — textura local
+- **HOG** (Histogram of Oriented Gradients) — gradientes y forma
+- **Momentos Invariantes de Hu** — forma global invariante a escala/rotación
+- **Código de Cadena de Freeman** — descriptor de contorno
+
+Estos descriptores se combinan en un único vector de características y
+se comparan cuatro clasificadores sobre él: **KNN**, **SVM**, **Naive
+Bayes** y una **CNN** entrenada end-to-end sobre las imágenes crudas
+(PyTorch), como contraste entre ingeniería de características manual y
+representación aprendida.
+
+Dataset: [Sports balls – multiclass image classification](https://www.kaggle.com/datasets/samuelcortinhas/sports-balls-multiclass-image-classification) (Cortinhas, 2022).
+
+## Resultados
+
+Sobre el conjunto de prueba (1,841 imágenes, no vistas durante el
+entrenamiento):
+
+| Modelo | Accuracy | F1 macro | F1 ponderado |
+|---|---|---|---|
+| **SVM** | **0.539** | 0.535 | 0.539 |
+| CNN | 0.394 | 0.380 | 0.381 |
+| KNN | 0.342 | 0.338 | 0.341 |
+| Naive Bayes | 0.276 | 0.266 | 0.266 |
+
+Matrices de confusión, gráfica comparativa y CSVs completos se generan
+en `results/figures/` al correr el pipeline.
+
+## Instalación
 
 ```bash
 python -m venv venv
@@ -13,10 +41,9 @@ source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## 2. Preparar el dataset
+## Preparar el dataset
 
-Descarga el dataset "Sports Balls" y colócalo con esta estructura
-(la misma del dataset de Kaggle, 80/20 train/test, subcarpeta por clase):
+Descarga el dataset desde Kaggle y colócalo con esta estructura:
 
 ```
 data/
@@ -29,76 +56,73 @@ data/
     └── ...
 ```
 
-## 3. Ejecutar el pipeline completo
+## Uso
 
 ```bash
 python main.py --data_root ./data
 ```
 
-Esto hace, en orden:
-1. Lee `train/` y `test/` (`src/data_loader.py`).
-2. Extrae LBP + HOG + Hu + Freeman para cada imagen y guarda todo en
+Esto ejecuta el pipeline completo:
+
+1. Carga `train/` y `test/` (`src/data_loader.py`).
+2. Extrae LBP + HOG + Hu + Freeman por imagen y las guarda en
    `results/features/features_train.json` y `features_test.json`
    (`src/feature_extraction.py`, `src/storage.py`).
 3. Entrena KNN, SVM y Naive Bayes sobre el vector combinado
    (`src/classical_models.py`).
-4. Entrena una CNN (PyTorch) sobre las imágenes crudas
-   (`src/cnn_model.py`).
-5. Evalúa los 4 modelos: accuracy, matriz de confusión (PNG + CSV) y
-   tabla comparativa final (`src/evaluate.py`), guardado todo en
-   `results/figures/`.
+4. Entrena una CNN sobre las imágenes crudas (`src/cnn_model.py`).
+5. Evalúa los 4 modelos y genera matrices de confusión y tabla
+   comparativa (`src/evaluate.py`).
 
-### Flags útiles
+### Flags opcionales
 
 ```bash
-# Reutilizar características ya extraídas (evita repetir el paso más lento)
+# Reutilizar características ya extraídas
 python main.py --data_root ./data --skip_extraction
 
-# Iterar rápido sobre los modelos clásicos sin entrenar la CNN
+# Omitir el entrenamiento de la CNN
 python main.py --data_root ./data --skip_cnn
 ```
 
-## 4. Salidas generadas
+## Estructura del proyecto
+
+```
+sports_ball_classifier/
+├── main.py                     # orquestador del pipeline
+├── requirements.txt
+├── data/                       # dataset (no versionado)
+├── results/                    # salidas generadas (no versionado)
+└── src/
+    ├── config.py                # rutas e hiperparámetros centralizados
+    ├── data_loader.py            # lectura de train/ y test/
+    ├── feature_extraction.py     # LBP, HOG, Hu, Freeman
+    ├── storage.py                # serialización de características (JSON)
+    ├── classical_models.py       # pipelines de KNN, SVM, Naive Bayes
+    ├── cnn_model.py               # arquitectura y entrenamiento de la CNN
+    └── evaluate.py                # métricas, matrices de confusión, comparativa
+```
+
+## Salidas generadas
 
 ```
 results/
 ├── features/
-│   ├── features_train.json     # estructura de datos (JSON) pedida en la rúbrica
+│   ├── features_train.json
 │   └── features_test.json
 └── figures/
     ├── confusion_matrix_KNN.png / .csv
     ├── confusion_matrix_SVM.png / .csv
     ├── confusion_matrix_NaiveBayes.png / .csv
     ├── confusion_matrix_CNN.png / .csv
-    ├── model_comparison.png        # gráfica de barras comparativa
-    └── model_comparison.csv        # tabla de accuracy/F1 por modelo
+    ├── model_comparison.png
+    └── model_comparison.csv
 ```
 
-## 5. Mapeo del código a la rúbrica del examen
+## Stack técnico
 
-| Requisito de la rúbrica | Dónde está implementado |
-|---|---|
-| Pipeline de extracción de características | `src/feature_extraction.py` (LBP, HOG, Hu, Freeman) |
-| Estructura de datos (JSON) | `src/storage.py` |
-| Configuración de modelos, justificada | `src/classical_models.py`, `src/cnn_model.py` (docstrings explican cada decisión) |
-| Tablas de confusión + Accuracy comparativo | `src/evaluate.py` |
-| Código modularizado, comentado y organizado | separación en `data_loader / feature_extraction / storage / classical_models / cnn_model / evaluate`, cada uno con una sola responsabilidad |
-| Resultados > azar matemático | con 15 clases, el azar es ~6.7% de accuracy; el pipeline fue validado end-to-end con un dataset sintético y todos los modelos superaron ese umbral |
+Python · OpenCV · scikit-image · scikit-learn · PyTorch · pandas · matplotlib
 
-## 6. Notas para el reporte técnico (Entregable 1)
+## Autor
 
-- **Trabajos relacionados**: al describir LBP, HOG, Hu y Freeman en el
-  estado del arte, cita los artículos originales (Ojala et al. 1996/2002
-  para LBP; Dalal & Triggs 2005 para HOG; Hu 1962 para los momentos
-  invariantes; Freeman 1961 para el código de cadena) y su aplicación a
-  clasificación de objetos deportivos/esféricos.
-- **Justificación JSON vs SQL**: está documentada como docstring en
-  `src/storage.py`; cópiala/adáptala directamente a la sección de
-  Materiales y Métodos.
-- **Qué descriptor aportó más valor** (para la sección de Conclusiones):
-  usa `storage.to_matrix(records, feature_key=...)` con `"lbp"`, `"hog"`,
-  `"hu"` o `"freeman"` por separado, entrena el mismo modelo con cada
-  uno, y compara accuracy — el código ya soporta esto sin modificaciones.
-- **Clasificación ML clásico vs CNN**: la comparación directa es el
-  contraste que pide la rúbrica en la Sección de Resultados de la
-  presentación oral (5 min, núcleo de la defensa).
+Johan — Ingeniería en Inteligencia Artificial, Universidad de Xalapa.
+Proyecto desarrollado para la asignatura de Procesamiento de Imágenes.
